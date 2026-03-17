@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Riverbed AppResponse — ROI Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script>if(typeof PptxGenJS==='undefined'){var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js';document.head.appendChild(s);}</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#FAFBFD;--bg-card:#FFFFFF;--bg-muted:#F1F5F9;--bg-accent-soft:rgba(6,182,212,0.06);
+  --border:#E2E8F0;--border-hover:#CBD5E1;--border-active:rgba(6,182,212,0.5);
+  --text-primary:#0F172A;--text-secondary:#475569;--text-muted:#94A3B8;
+  --accent:#0891B2;--accent-light:#06B6D4;--accent-bg:rgba(6,182,212,0.08);
+  --success:#059669;--success-light:#10B981;--success-bg:rgba(16,185,129,0.08);
+  --warning:#D97706;--warning-bg:rgba(245,158,11,0.08);
+  --danger:#DC2626;
+  --purple:#7C3AED;--purple-bg:rgba(124,58,237,0.08);
+  --blue:#2563EB;--blue-bg:rgba(37,99,235,0.08);
+  --orange:#EA580C;--orange-bg:rgba(234,88,12,0.08);
+  --riverbed:#0E7490;--riverbed-bg:rgba(14,116,144,0.08);
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.04);--shadow-md:0 4px 12px rgba(0,0,0,0.06);--shadow-lg:0 12px 40px rgba(0,0,0,0.08);
+  --radius:16px;--radius-md:12px;--radius-sm:8px;
+  --ease:cubic-bezier(0.16,1,0.3,1);--spring:cubic-bezier(0.34,1.56,0.64,1);
+}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text-primary);line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+/* BG */
+.bg-pattern{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:radial-gradient(circle at 1px 1px,rgba(0,0,0,.03) 1px,transparent 0);background-size:32px 32px}
+.bg-glow-top{position:fixed;top:-300px;left:50%;transform:translateX(-50%);width:1000px;height:600px;background:radial-gradient(ellipse,rgba(6,182,212,.06) 0%,rgba(124,58,237,.03) 40%,transparent 70%);z-index:0;pointer-events:none;animation:glowFloat 15s ease-in-out infinite alternate}
+@keyframes glowFloat{0%{opacity:.6;transform:translateX(-50%) scale(1)}100%{opacity:1;transform:translateX(-50%) scale(1.15)}}
+
+/* HERO */
+.hero{position:relative;z-index:1;padding:64px 32px 72px;text-align:center;overflow:hidden}
+.hero::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(6,182,212,.25),rgba(124,58,237,.12),transparent)}
+.hero-chip{display:inline-flex;align-items:center;gap:8px;background:var(--accent-bg);border:1px solid rgba(6,182,212,.15);padding:7px 18px 7px 14px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);margin-bottom:24px;animation:fadeInDown .6s var(--ease) backwards}
+.hero-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--accent-light);box-shadow:0 0 8px var(--accent-light);animation:dotPulse 2.5s ease-in-out infinite}
+@keyframes dotPulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes fadeInDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+.hero h1{font-size:52px;font-weight:900;letter-spacing:-2.5px;line-height:1.05;color:var(--text-primary);margin-bottom:12px;animation:fadeInUp .7s var(--ease) .1s backwards}
+.hero h1 span{background:linear-gradient(135deg,var(--accent),#0EA5E9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero .subtitle{font-size:17px;color:var(--text-secondary);max-width:560px;margin:0 auto;line-height:1.7;animation:fadeInUp .7s var(--ease) .2s backwards}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.container{max-width:1300px;margin:0 auto;padding:0 28px;position:relative;z-index:1}
+
+/* KPI */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:1300px;margin:-36px auto 48px;padding:0 28px;position:relative;z-index:2}
+@media(max-width:900px){.kpi-strip{grid-template-columns:repeat(2,1fr)}}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;box-shadow:var(--shadow-sm);transition:all .35s var(--ease);animation:cardPop .5s var(--ease) backwards;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;border-radius:0 0 2px 2px;opacity:0;transition:opacity .3s}
+.kpi-card.roi::before{background:var(--success-light)}.kpi-card.savings::before{background:var(--accent-light)}.kpi-card.payback::before{background:var(--purple)}.kpi-card.investment::before{background:var(--warning)}
+.kpi-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--border-hover)}.kpi-card:hover::before{opacity:1}.kpi-card:hover .kpi-value{transform:scale(1.05)}
+.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);font-weight:700;margin-bottom:8px}
+.kpi-value{font-size:32px;font-weight:900;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;transition:transform .3s var(--spring);line-height:1.1}
+.kpi-hint{font-size:11px;color:var(--text-muted);margin-top:6px;font-weight:500}
+.kpi-card.roi .kpi-value{color:var(--success)}.kpi-card.savings .kpi-value{color:var(--accent)}.kpi-card.payback .kpi-value{color:var(--purple)}.kpi-card.investment .kpi-value{color:var(--warning)}
+@keyframes cardPop{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.kpi-card:nth-child(1){animation-delay:.05s}.kpi-card:nth-child(2){animation-delay:.1s}.kpi-card:nth-child(3){animation-delay:.15s}.kpi-card:nth-child(4){animation-delay:.2s}
+
+/* CARD */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px 30px;box-shadow:var(--shadow-sm);transition:all .35s var(--ease);position:relative;overflow:hidden;animation:cardPop .5s var(--ease) backwards}
+.card:hover{box-shadow:var(--shadow-md);border-color:var(--border-hover)}
+.card.disabled{opacity:.4;pointer-events:none;filter:grayscale(.6);transform:scale(.985)}
+.card.disabled .card-head{pointer-events:auto;opacity:1}
+.card-head{display:flex;align-items:center;gap:14px;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.card-badge{width:42px;height:42px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:transform .3s var(--ease)}
+.card:hover .card-badge{transform:scale(1.08) rotate(-3deg)}
+.card-badge.blue{background:var(--blue-bg)}.card-badge.amber{background:var(--warning-bg)}.card-badge.red{background:rgba(220,38,38,.06)}.card-badge.green{background:var(--success-bg)}.card-badge.purple{background:var(--purple-bg)}.card-badge.orange{background:var(--orange-bg)}.card-badge.cyan{background:var(--accent-bg)}
+.card-head h3{font-size:15px;font-weight:700;color:var(--text-primary);letter-spacing:-.3px}
+.card-head p{font-size:12px;color:var(--text-muted);margin-top:2px}
+.card-head .meta{flex:1}
+
+/* TOGGLE */
+.sec-toggle{position:relative;width:42px;height:24px;flex-shrink:0;cursor:pointer}
+.sec-toggle input{display:none}
+.sec-toggle .track{position:absolute;inset:0;background:var(--border);border-radius:100px;transition:background .25s var(--ease)}
+.sec-toggle input:checked+.track{background:var(--accent-light)}
+.sec-toggle .thumb{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.15);transition:transform .25s var(--spring)}
+.sec-toggle input:checked~.thumb{transform:translateX(18px)}
+
+/* PER-METRIC PRESETS */
+.metric-presets{display:inline-flex;gap:3px;margin-left:auto;flex-shrink:0}
+.mp-btn{padding:2px 8px;border:1px solid var(--border);border-radius:4px;font-size:9px;font-weight:700;font-family:'Inter',sans-serif;color:var(--text-muted);background:transparent;cursor:pointer;transition:all .2s var(--ease);letter-spacing:.3px;text-transform:uppercase;line-height:1.6}
+.mp-btn:hover{color:var(--text-secondary);border-color:var(--border-hover);background:var(--bg-muted)}
+.mp-btn.active{color:var(--accent);border-color:var(--accent-light);background:var(--accent-bg)}
+
+/* RIVERBED RECOMMENDED */
+.rb-marker{position:relative;display:flex;align-items:center;gap:6px;margin-top:6px}
+.rb-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:100px;font-size:10px;font-weight:600;color:var(--riverbed);background:var(--riverbed-bg);border:1px solid rgba(14,116,144,.15);cursor:default;transition:all .2s}
+.rb-badge svg{width:12px;height:12px;fill:currentColor}
+.rb-info{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--riverbed-bg);border:1px solid rgba(14,116,144,.2);color:var(--riverbed);font-size:8px;font-weight:800;cursor:help;position:relative;transition:all .2s;flex-shrink:0}
+.rb-info:hover{background:rgba(14,116,144,.15);border-color:rgba(14,116,144,.4)}
+.rb-info:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);background:var(--text-primary);color:#fff;padding:12px 16px;border-radius:var(--radius-sm);font-size:11px;font-weight:400;max-width:320px;min-width:220px;white-space:normal;z-index:100;box-shadow:var(--shadow-lg);line-height:1.5;animation:tipIn .2s var(--ease)}
+.rb-apply{padding:2px 8px;border:1px solid rgba(14,116,144,.25);border-radius:4px;font-size:9px;font-weight:700;font-family:'Inter',sans-serif;color:var(--riverbed);background:transparent;cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.rb-apply:hover{background:var(--riverbed-bg);border-color:var(--riverbed)}
+
+/* GRID */
+.grid-2col{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+@media(max-width:960px){.grid-2col{grid-template-columns:1fr}}
+.full-span{grid-column:1/-1}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;color:var(--text-muted);margin:48px 0 22px;display:flex;align-items:center;gap:14px;animation:fadeInUp .5s var(--ease) backwards}
+.section-label::before{content:'';width:20px;height:2px;background:linear-gradient(90deg,var(--accent),transparent);border-radius:1px}
+.section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent 60%)}
+
+/* FIELDS */
+.field{margin-bottom:22px}.field:last-child{margin-bottom:0}
+.field-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+.field-header label{font-size:13px;font-weight:500;color:var(--text-secondary);flex:1;min-width:0}
+.field-value{font-size:14px;font-weight:700;color:var(--accent);min-width:60px;text-align:right;font-variant-numeric:tabular-nums;transition:all .2s;flex-shrink:0}
+
+/* RANGE */
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:100px;background:#E2E8F0;outline:none;cursor:pointer;transition:background .2s}
+input[type="range"]:hover{background:#CBD5E1}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#22D3EE,var(--accent));border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.15),0 0 0 3px rgba(6,182,212,.1);cursor:pointer;transition:all .2s var(--spring)}
+input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.25);box-shadow:0 2px 8px rgba(0,0,0,.2),0 0 0 5px rgba(6,182,212,.15)}
+input[type="range"]:active::-webkit-slider-thumb{transform:scale(1.15);box-shadow:0 2px 10px rgba(0,0,0,.25),0 0 0 6px rgba(6,182,212,.2)}
+input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#22D3EE,var(--accent));border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.15),0 0 0 3px rgba(6,182,212,.1);cursor:pointer}
+
+/* TEXT INPUT */
+.text-input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'Inter',sans-serif;font-weight:500;color:var(--text-primary);background:var(--bg-card);transition:all .2s var(--ease)}
+.text-input:focus{outline:none;border-color:var(--accent-light);box-shadow:0 0 0 3px var(--accent-bg)}
+.text-input:hover:not(:focus){border-color:var(--border-hover)}
+.text-input option{background:var(--bg-card)}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* TOOLTIP */
+.tip{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--bg-muted);border:1px solid var(--border);color:var(--text-muted);font-size:8px;font-weight:800;margin-left:5px;cursor:help;position:relative;transition:all .2s;vertical-align:middle;flex-shrink:0}
+.tip:hover{background:var(--accent-bg);color:var(--accent);border-color:rgba(6,182,212,.3)}
+.tip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);background:var(--text-primary);color:#fff;padding:10px 14px;border-radius:var(--radius-sm);font-size:11px;font-weight:400;max-width:300px;min-width:180px;white-space:normal;z-index:100;box-shadow:var(--shadow-lg);line-height:1.5;animation:tipIn .2s var(--ease)}
+@keyframes tipIn{from{opacity:0;transform:translateX(-50%) translateY(4px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* INFO BAR */
+.info-bar{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;box-shadow:var(--shadow-sm);margin-bottom:18px;animation:cardPop .5s var(--ease) .25s backwards}
+.info-bar h3{font-size:11px;font-weight:700;margin-bottom:16px;color:var(--text-muted);text-transform:uppercase;letter-spacing:2px}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.info-grid label{font-size:12px;font-weight:500;display:block;margin-bottom:5px;color:var(--text-muted)}
+
+/* RESULTS TABLE */
+.results-table{width:100%;border-collapse:collapse;margin-top:10px}
+.results-table th,.results-table td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--border);font-size:13px}
+.results-table th{font-weight:600;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1.5px}
+.results-table td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.results-table tr:last-child td{border-bottom:none}
+.results-table .total td{font-weight:800;font-size:14px;color:var(--text-primary);border-top:2px solid var(--accent);border-bottom:none;padding-top:16px}
+.results-table .savings-row td:last-child{color:var(--success)}
+.results-table tr{transition:background .15s}
+.results-table tbody tr:hover{background:var(--bg-muted)}
+.results-table .savings-row td:first-child::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--success-light);margin-right:8px;vertical-align:middle}
+
+/* 3-YEAR */
+.projection-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}
+.year-card{text-align:center;padding:24px 18px;border-radius:var(--radius-md);background:var(--accent-bg);border:1px solid rgba(6,182,212,.1);transition:all .35s var(--ease);position:relative;overflow:hidden}
+.year-card::before{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--accent-light),transparent);opacity:0;transition:opacity .3s}
+.year-card:hover::before{opacity:1}
+.year-card:hover{border-color:rgba(6,182,212,.25);background:rgba(6,182,212,.1);transform:translateY(-3px);box-shadow:0 8px 24px rgba(6,182,212,.08)}
+.year-card h4{font-size:10px;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:2px;font-weight:700}
+.year-card .amount{font-size:24px;font-weight:900;color:var(--text-primary);letter-spacing:-1px;transition:transform .3s var(--spring)}
+.year-card:hover .amount{transform:scale(1.05)}
+.year-card .cumul{font-size:12px;color:var(--success);margin-top:6px;font-weight:600}
+.chart-wrap{position:relative;width:100%}.chart-wrap canvas{width:100%!important}
+
+/* ACTIONS */
+.actions{display:flex;justify-content:center;align-items:center;gap:14px;padding:52px 0 60px}
+.btn-primary{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--accent),#0EA5E9);color:#fff;border:none;padding:14px 40px;border-radius:100px;font-size:15px;font-weight:600;cursor:pointer;transition:all .3s var(--ease);font-family:'Inter',sans-serif;letter-spacing:-.2px;box-shadow:0 4px 16px rgba(6,182,212,.25);position:relative;overflow:hidden}
+.btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.2),transparent);opacity:0;transition:opacity .3s}
+.btn-primary:hover::after{opacity:1}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(6,182,212,.35)}
+.btn-primary:active{transform:translateY(0) scale(.98)}
+.btn-ghost{display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--text-muted);border:1px solid var(--border);padding:12px 28px;border-radius:100px;font-size:14px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all .25s var(--ease)}
+.btn-ghost:hover{border-color:var(--danger);color:var(--danger);background:rgba(220,38,38,.04)}
+.btn-save,.btn-load{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:100px;font-size:14px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all .25s var(--ease);border:1px solid var(--border)}
+.btn-save{background:var(--success-bg);color:var(--success);border-color:rgba(5,150,105,.2)}
+.btn-save:hover{background:rgba(5,150,105,.15);border-color:var(--success);transform:translateY(-2px);box-shadow:0 4px 16px rgba(5,150,105,.15)}
+.btn-load{background:var(--purple-bg);color:var(--purple);border-color:rgba(124,58,237,.2)}
+.btn-load:hover{background:rgba(124,58,237,.15);border-color:var(--purple);transform:translateY(-2px);box-shadow:0 4px 16px rgba(124,58,237,.15)}
+.btn-save:active,.btn-load:active{transform:translateY(0) scale(.98)}
+
+.footer{text-align:center;padding:28px;color:var(--text-muted);font-size:12px;border-top:1px solid var(--border);position:relative;z-index:1}
+.footer strong{color:var(--accent);font-weight:600}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.18)}
+@media(max-width:768px){.hero h1{font-size:34px}.kpi-value{font-size:24px}.projection-grid{grid-template-columns:1fr}.input-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="bg-pattern"></div>
+<div class="bg-glow-top"></div>
+
+<div class="hero">
+  <div class="hero-chip"><span class="dot"></span> ROI Calculator</div>
+  <h1>Riverbed <span>AppResponse</span></h1>
+  <p class="subtitle">Quantify the return on investment for your application performance monitoring and network observability solution.</p>
+</div>
+
+<div class="kpi-strip">
+  <div class="kpi-card roi"><div class="kpi-label">ROI</div><div class="kpi-value" id="sum-roi">--</div><div class="kpi-hint">Annual Return Rate</div></div>
+  <div class="kpi-card savings"><div class="kpi-label">Annual Savings</div><div class="kpi-value" id="sum-savings">--</div><div class="kpi-hint">Total Annual Savings</div></div>
+  <div class="kpi-card payback"><div class="kpi-label">Payback</div><div class="kpi-value" id="sum-payback">--</div><div class="kpi-hint">Payback Period</div></div>
+  <div class="kpi-card investment"><div class="kpi-label">Investment</div><div class="kpi-value" id="sum-investment">--</div><div class="kpi-hint">First Year Total Cost</div></div>
+</div>
+
+<div class="container">
+  <div class="info-bar">
+    <h3>Customer Information</h3>
+    <div class="info-grid">
+      <div class="field"><label>Company Name</label><input type="text" class="text-input" id="companyName" placeholder="Enter company name"></div>
+      <div class="field"><label>Industry</label><select class="text-input" id="industry"><option value="Finance">Finance &amp; Banking</option><option value="Telecom">Telecommunications</option><option value="Healthcare">Healthcare</option><option value="Retail">Retail</option><option value="Manufacturing">Manufacturing</option><option value="Government">Government</option><option value="Energy">Energy</option><option value="Technology" selected>Technology</option><option value="Other">Other</option></select></div>
+      <div class="field"><label>Contact Person</label><input type="text" class="text-input" id="contactName" placeholder="Full Name"></div>
+      <div class="field"><label>Date</label><input type="date" class="text-input" id="reportDate" value=""></div>
+    </div>
+  </div>
+
+  <div class="section-label">Input Parameters</div>
+
+  <div class="grid-2col">
+
+    <!-- IT Operations -->
+    <div class="card" id="sec-it">
+      <div class="card-head">
+        <div class="card-badge blue">&#128187;</div>
+        <div class="meta"><h3>IT Operations</h3><p>Team and operational metrics</p></div>
+        <label class="sec-toggle"><input type="checkbox" checked onchange="toggleSection('sec-it',this.checked)"><span class="track"></span><span class="thumb"></span></label>
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>IT Staff Count <span class="tip" data-tip="Number of IT staff involved in network and application troubleshooting">?</span></label>
+          <span class="field-value" id="val-itStaff">10</span>
+        </div>
+        <input type="range" id="itStaff" min="0" max="100" value="10" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>Avg IT Hourly Cost ($) <span class="tip" data-tip="Fully loaded hourly cost including salary and benefits">?</span></label>
+          <div class="metric-presets" data-field="itHourly">
+            <button class="mp-btn" onclick="setMetric('itHourly',35,this)" title="Small org / junior staff — BLS 2026">Low</button>
+            <button class="mp-btn" onclick="setMetric('itHourly',60,this)" title="Mid-market ops manager — PayScale 2026">Med</button>
+            <button class="mp-btn" onclick="setMetric('itHourly',85,this)" title="Enterprise / senior — PayScale 2026">High</button>
+            <span class="tip" data-tip="Low: $35/hr (junior NOC tech, BLS 2026). Medium: $60/hr (Ops Manager, PayScale 2026). High: $85/hr (Sr. Director level, PayScale 2026).">?</span>
+          </div>
+          <span class="field-value" id="val-itHourly">$75</span>
+        </div>
+        <input type="range" id="itHourly" min="0" max="250" step="5" value="75" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><label>Business-Critical Applications</label><span class="field-value" id="val-critApps">25</span></div>
+        <input type="range" id="critApps" min="0" max="200" value="25" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><label>Total End Users</label><span class="field-value" id="val-endUsers">500</span></div>
+        <input type="range" id="endUsers" min="0" max="50000" step="50" value="500" oninput="update()">
+      </div>
+    </div>
+
+    <!-- Incident Management & MTTR -->
+    <div class="card" id="sec-incident">
+      <div class="card-head">
+        <div class="card-badge amber">&#9888;&#65039;</div>
+        <div class="meta"><h3>Incident Management &amp; MTTR</h3><p>Troubleshooting and resolution times</p></div>
+        <label class="sec-toggle"><input type="checkbox" checked onchange="toggleSection('sec-incident',this.checked)"><span class="track"></span><span class="thumb"></span></label>
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>Avg Monthly Incidents <span class="tip" data-tip="Monthly network and application performance incidents/tickets">?</span></label>
+          <div class="metric-presets" data-field="incidents">
+            <button class="mp-btn" onclick="setMetric('incidents',4,this)" title="Small org — EMA Research 2025">Low</button>
+            <button class="mp-btn" onclick="setMetric('incidents',25,this)" title="Mid-market — EMA Research 2025">Med</button>
+            <button class="mp-btn" onclick="setMetric('incidents',85,this)" title="Enterprise — EMA Research 2025">High</button>
+            <span class="tip" data-tip="Low: 4/mo (small org). Medium: 25/mo (mid-market). High: 85/mo (enterprise). Source: EMA Research 2025, incidents rose 33% YoY.">?</span>
+          </div>
+          <span class="field-value" id="val-incidents">30</span>
+        </div>
+        <input type="range" id="incidents" min="0" max="200" value="30" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>Current Avg MTTR (hours) <span class="tip" data-tip="Mean Time To Resolution — Average time to resolve incidents">?</span></label>
+          <div class="metric-presets" data-field="mttr">
+            <button class="mp-btn" onclick="setMetric('mttr',1.5,this)" title="Elite DevOps teams — DORA 2025">Low</button>
+            <button class="mp-btn" onclick="setMetric('mttr',4,this)" title="Industry average — Gartner 2025">Med</button>
+            <button class="mp-btn" onclick="setMetric('mttr',12,this)" title="Legacy environments — Gartner 2025">High</button>
+            <span class="tip" data-tip="Low: 1.5 hrs (elite DevOps, DORA 2025). Medium: 4 hrs (industry avg, Gartner 2025). High: 12 hrs (legacy/complex, Gartner 2025).">?</span>
+          </div>
+          <span class="field-value" id="val-mttr">4</span>
+        </div>
+        <input type="range" id="mttr" min="0" max="24" step="0.5" value="4" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>Expected MTTR Reduction (%)</label>
+          <span class="field-value" id="val-mttrReduction">50%</span>
+        </div>
+        <input type="range" id="mttrReduction" min="0" max="80" value="50" oninput="update()">
+        <div class="rb-marker">
+          <span class="rb-badge"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Riverbed Recommended: 47%</span>
+          <button class="rb-apply" onclick="setMetric('mttrReduction',47)">Apply</button>
+          <span class="rb-info" data-tip="Riverbed AppResponse achieves 47% MTTR reduction through full packet capture and root cause analysis. Verified by OneMain Financial case study (Riverbed/IDC). Advanced AI automation can achieve up to 85% (7x factor).">?</span>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>Staff Per Incident <span class="tip" data-tip="Average number of IT staff involved per incident">?</span></label>
+          <div class="metric-presets" data-field="staffPerIncident">
+            <button class="mp-btn" onclick="setMetric('staffPerIncident',1,this)" title="Small team — single responder">Low</button>
+            <button class="mp-btn" onclick="setMetric('staffPerIncident',3,this)" title="Mid-market — cross-functional">Med</button>
+            <button class="mp-btn" onclick="setMetric('staffPerIncident',5,this)" title="Enterprise — war room escalation">High</button>
+            <span class="tip" data-tip="Low: 1 (single responder). Medium: 3 (cross-functional team). High: 5 (enterprise war room escalation). Source: EMA Network Management Megatrends 2025.">?</span>
+          </div>
+          <span class="field-value" id="val-staffPerIncident">2</span>
+        </div>
+        <input type="range" id="staffPerIncident" min="0" max="10" value="2" oninput="update()">
+      </div>
+    </div>
+
+    <!-- Downtime & Revenue Impact -->
+    <div class="card" id="sec-downtime">
+      <div class="card-head">
+        <div class="card-badge red">&#128200;</div>
+        <div class="meta"><h3>Downtime &amp; Revenue Impact</h3><p>Business continuity and revenue loss metrics</p></div>
+        <label class="sec-toggle"><input type="checkbox" checked onchange="toggleSection('sec-downtime',this.checked)"><span class="track"></span><span class="thumb"></span></label>
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>Hourly App Downtime Cost ($) <span class="tip" data-tip="Hourly revenue loss when critical applications are down">?</span></label>
+          <div class="metric-presets" data-field="downtimeCost">
+            <button class="mp-btn" onclick="setMetric('downtimeCost',12000,this)" title="SMB — Erwood Group / ITIC 2025">Low</button>
+            <button class="mp-btn" onclick="setMetric('downtimeCost',150000,this)" title="Mid-market — Uptime Institute 2025">Med</button>
+            <button class="mp-btn" onclick="setMetric('downtimeCost',450000,this)" title="Enterprise — Gartner/Uptime Institute">High</button>
+            <span class="tip" data-tip="Low: $12K/hr (SMB, ITIC 2025). Medium: $150K/hr (mid-market, Uptime Institute 2025). High: $450K/hr (enterprise, Gartner). Fortune 500 can reach $1M+/hr.">?</span>
+          </div>
+          <span class="field-value" id="val-downtimeCost">$10,000</span>
+        </div>
+        <input type="range" id="downtimeCost" min="0" max="500000" step="1000" value="10000" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>Monthly Unplanned Downtime (hrs) <span class="tip" data-tip="Total unplanned application downtime hours per month">?</span></label>
+          <div class="metric-presets" data-field="monthlyDowntime">
+            <button class="mp-btn" onclick="setMetric('monthlyDowntime',2,this)" title="Well-managed — Uptime Institute 2025">Low</button>
+            <button class="mp-btn" onclick="setMetric('monthlyDowntime',8,this)" title="Industry average — Uptime Institute 2025">Med</button>
+            <button class="mp-btn" onclick="setMetric('monthlyDowntime',28,this)" title="Complex / legacy — Uptime Institute 2025">High</button>
+            <span class="tip" data-tip="Low: 2 hrs/mo (well-managed). Medium: 8 hrs/mo (industry avg). High: 28 hrs/mo (complex/legacy). Source: Uptime Institute Annual Outage Analysis 2025 — 86 hrs avg annually.">?</span>
+          </div>
+          <span class="field-value" id="val-monthlyDowntime">8</span>
+        </div>
+        <input type="range" id="monthlyDowntime" min="0" max="100" step="1" value="8" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><label>Expected Downtime Reduction (%)</label><span class="field-value" id="val-downtimeReduction">40%</span></div>
+        <input type="range" id="downtimeReduction" min="0" max="80" value="40" oninput="update()">
+        <div class="rb-marker">
+          <span class="rb-badge"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Riverbed Recommended: 50%</span>
+          <button class="rb-apply" onclick="setMetric('downtimeReduction',50)">Apply</button>
+          <span class="rb-info" data-tip="IDC measured 82.4% downtime reduction with Riverbed SteelCentral APM portfolio. Conservative estimate of 50% accounts for phased deployment. Source: IDC Business Value Snapshot — 521% 3-year ROI, 6.4-month payback.">?</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Productivity -->
+    <div class="card" id="sec-productivity">
+      <div class="card-head">
+        <div class="card-badge green">&#128101;</div>
+        <div class="meta"><h3>User Productivity</h3><p>End user productivity metrics</p></div>
+        <label class="sec-toggle"><input type="checkbox" checked onchange="toggleSection('sec-productivity',this.checked)"><span class="track"></span><span class="thumb"></span></label>
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>Productivity Loss Per Incident (min) <span class="tip" data-tip="Minutes lost per user for each performance issue">?</span></label>
+          <div class="metric-presets" data-field="prodLoss">
+            <button class="mp-btn" onclick="setMetric('prodLoss',30,this)" title="Minor slowdown — Nexthink 2025">Low</button>
+            <button class="mp-btn" onclick="setMetric('prodLoss',120,this)" title="Significant outage — Nexthink 2025">Med</button>
+            <button class="mp-btn" onclick="setMetric('prodLoss',200,this)" title="Critical failure — Nexthink 2025">High</button>
+            <span class="tip" data-tip="Low: 30 min (minor slowdown). Medium: 120 min (significant outage). High: 200 min (critical failure). Source: Nexthink 2025 — IT issues cost 3+ hrs (202 min) avg productivity per incident.">?</span>
+          </div>
+          <span class="field-value" id="val-prodLoss">30</span>
+        </div>
+        <input type="range" id="prodLoss" min="0" max="240" step="5" value="30" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><label>Affected User %</label><span class="field-value" id="val-affectedPct">20%</span></div>
+        <input type="range" id="affectedPct" min="0" max="100" step="5" value="20" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>Avg Employee Hourly Cost ($) <span class="tip" data-tip="Average hourly productivity cost of end users">?</span></label>
+          <div class="metric-presets" data-field="empHourly">
+            <button class="mp-btn" onclick="setMetric('empHourly',30,this)" title="Entry level — BLS 2026">Low</button>
+            <button class="mp-btn" onclick="setMetric('empHourly',52,this)" title="US average — BLS 2026">Med</button>
+            <button class="mp-btn" onclick="setMetric('empHourly',95,this)" title="Senior / specialist — BLS 2026">High</button>
+            <span class="tip" data-tip="Low: $30/hr (entry level). Medium: $52/hr (US average). High: $95/hr (senior/specialist). Source: Bureau of Labor Statistics, Average Hourly Earnings 2026.">?</span>
+          </div>
+          <span class="field-value" id="val-empHourly">$45</span>
+        </div>
+        <input type="range" id="empHourly" min="0" max="200" step="5" value="45" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><label>Expected Productivity Improvement (%)</label><span class="field-value" id="val-prodImprovement">45%</span></div>
+        <input type="range" id="prodImprovement" min="0" max="80" value="45" oninput="update()">
+        <div class="rb-marker">
+          <span class="rb-badge"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Riverbed Recommended: 40%</span>
+          <button class="rb-apply" onclick="setMetric('prodImprovement',40)">Apply</button>
+          <span class="rb-info" data-tip="IDC research shows 40% employee productivity enhancement from APM solutions. Riverbed achieves 66% troubleshooting time savings (20 min per incident across 13,000 remediations/90 days). Source: IDC APM ROI Study.">?</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tool Consolidation & Infrastructure -->
+    <div class="card" id="sec-tools">
+      <div class="card-head">
+        <div class="card-badge purple">&#128295;</div>
+        <div class="meta"><h3>Tool Consolidation &amp; Infrastructure</h3><p>Existing monitoring tools and infra optimization</p></div>
+        <label class="sec-toggle"><input type="checkbox" checked onchange="toggleSection('sec-tools',this.checked)"><span class="track"></span><span class="thumb"></span></label>
+      </div>
+      <div class="field">
+        <div class="field-header"><label>Existing Monitoring Tools</label><span class="field-value" id="val-existingTools">4</span></div>
+        <input type="range" id="existingTools" min="0" max="15" value="4" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><label>Annual License Cost Per Tool ($)</label><span class="field-value" id="val-toolCost">$25,000</span></div>
+        <input type="range" id="toolCost" min="0" max="200000" step="1000" value="25000" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><label>Tools to Consolidate</label><span class="field-value" id="val-consolidateTools">2</span></div>
+        <input type="range" id="consolidateTools" min="0" max="10" value="2" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><label>Annual Infra/Network Budget ($)</label><span class="field-value" id="val-infraBudget">$500,000</span></div>
+        <input type="range" id="infraBudget" min="0" max="5000000" step="10000" value="500000" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><label>Infrastructure Optimization (%)</label><span class="field-value" id="val-infraSaving">5%</span></div>
+        <input type="range" id="infraSaving" min="0" max="20" value="5" oninput="update()">
+        <div class="rb-marker">
+          <span class="rb-badge"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Riverbed Recommended: 8%</span>
+          <button class="rb-apply" onclick="setMetric('infraSaving',8)">Apply</button>
+          <span class="rb-info" data-tip="Riverbed platform delivers up to 50% IT cost reduction and 95% bandwidth optimization. Conservative 8% infra savings based on $931/100 users annually. Source: IDC Study, Riverbed IT Asset Cost Reduction Solutions.">?</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Security & Compliance -->
+    <div class="card" id="sec-security">
+      <div class="card-head">
+        <div class="card-badge orange">&#128274;</div>
+        <div class="meta"><h3>Security &amp; Compliance</h3><p>Security investigation and forensic metrics</p></div>
+        <label class="sec-toggle"><input type="checkbox" checked onchange="toggleSection('sec-security',this.checked)"><span class="track"></span><span class="thumb"></span></label>
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>Monthly Security Investigations <span class="tip" data-tip="Monthly security incidents requiring network forensic analysis">?</span></label>
+          <div class="metric-presets" data-field="secIncidents">
+            <button class="mp-btn" onclick="setMetric('secIncidents',1,this)" title="Low-risk sector — Eye Security 2026">Low</button>
+            <button class="mp-btn" onclick="setMetric('secIncidents',8,this)" title="Average org — Eye Security 2026">Med</button>
+            <button class="mp-btn" onclick="setMetric('secIncidents',28,this)" title="Finance / regulated — Eye Security 2026">High</button>
+            <span class="tip" data-tip="Low: 1/mo (low-risk sector). Medium: 8/mo (average org). High: 28/mo (finance/regulated). Source: Eye Security — State of Incident Response 2026, 630 investigations analyzed.">?</span>
+          </div>
+          <span class="field-value" id="val-secIncidents">5</span>
+        </div>
+        <input type="range" id="secIncidents" min="0" max="50" value="5" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>Avg Time Per Investigation (hrs) <span class="tip" data-tip="Average time spent investigating each security incident">?</span></label>
+          <div class="metric-presets" data-field="secTime">
+            <button class="mp-btn" onclick="setMetric('secTime',8,this)" title="With MDR — Eye Security 2026">Low</button>
+            <button class="mp-btn" onclick="setMetric('secTime',20,this)" title="Average org — Eye Security 2026">Med</button>
+            <button class="mp-btn" onclick="setMetric('secTime',35,this)" title="Without MDR — Eye Security 2026">High</button>
+            <span class="tip" data-tip="Low: 8 hrs (with MDR services). Medium: 20 hrs (average). High: 35 hrs (without MDR, 71 hrs for complex). Source: Eye Security 2026 — MDR customers resolve 39 hrs vs non-MDR 71 hrs.">?</span>
+          </div>
+          <span class="field-value" id="val-secTime">8</span>
+        </div>
+        <input type="range" id="secTime" min="0" max="40" value="8" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><label>Investigation Time Reduction (%)</label><span class="field-value" id="val-secReduction">40%</span></div>
+        <input type="range" id="secReduction" min="0" max="70" value="40" oninput="update()">
+        <div class="rb-marker">
+          <span class="rb-badge"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Riverbed Recommended: 25%</span>
+          <button class="rb-apply" onclick="setMetric('secReduction',25)">Apply</button>
+          <span class="rb-info" data-tip="Riverbed AI automation reduced incident resolution time by 25% across 75,000+ monthly tickets. Packet capture forensics enables near-zero MTTR for security investigations. Source: Riverbed AI Automation Blog, Halkbank Case Study.">?</span>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-header">
+          <label>Security Specialist Hourly Cost ($)</label>
+          <div class="metric-presets" data-field="secHourly">
+            <button class="mp-btn" onclick="setMetric('secHourly',65,this)" title="Junior analyst — CyberSeek 2025">Low</button>
+            <button class="mp-btn" onclick="setMetric('secHourly',120,this)" title="Mid-level — CyberSeek 2025">Med</button>
+            <button class="mp-btn" onclick="setMetric('secHourly',200,this)" title="Sr. / CISO level — CyberSeek 2025">High</button>
+            <span class="tip" data-tip="Low: $65/hr (junior analyst). Medium: $120/hr (mid-level). High: $200/hr (Sr. Architect/CISO). Source: CyberSeek / CompTIA Cybersecurity Supply-Demand 2025.">?</span>
+          </div>
+          <span class="field-value" id="val-secHourly">$95</span>
+        </div>
+        <input type="range" id="secHourly" min="0" max="300" step="5" value="95" oninput="update()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Investment -->
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-head"><div class="card-badge cyan">&#128176;</div><div class="meta"><h3>Riverbed AppResponse Investment Cost</h3><p>License, deployment, and training costs</p></div></div>
+    <div class="input-row" style="grid-template-columns:repeat(4,1fr)">
+      <div class="field"><label style="font-size:12px;font-weight:500;display:block;margin-bottom:5px;color:var(--text-muted)">Annual License ($)</label><input type="number" class="text-input" id="licenseCost" value="85000" min="0" step="1000" oninput="update()"></div>
+      <div class="field"><label style="font-size:12px;font-weight:500;display:block;margin-bottom:5px;color:var(--text-muted)">Setup &amp; Deployment ($)</label><input type="number" class="text-input" id="implCost" value="25000" min="0" step="1000" oninput="update()"></div>
+      <div class="field"><label style="font-size:12px;font-weight:500;display:block;margin-bottom:5px;color:var(--text-muted)">Annual Support ($)</label><input type="number" class="text-input" id="supportCost" value="15000" min="0" step="1000" oninput="update()"></div>
+      <div class="field"><label style="font-size:12px;font-weight:500;display:block;margin-bottom:5px;color:var(--text-muted)">Training Cost ($)</label><input type="number" class="text-input" id="trainingCost" value="8000" min="0" step="500" oninput="update()"></div>
+    </div>
+  </div>
+
+  <div class="section-label">Results &amp; Analysis</div>
+
+  <div class="grid-2col">
+    <div class="card"><div class="card-head"><div class="card-badge green">&#128202;</div><div class="meta"><h3>Savings Breakdown</h3><p>Annual savings line items</p></div></div><table class="results-table"><thead><tr><th>Savings Category</th><th>Annual Amount</th></tr></thead><tbody id="savingsTableBody"></tbody></table></div>
+    <div class="card"><div class="card-head"><div class="card-badge cyan">&#128200;</div><div class="meta"><h3>Savings Distribution</h3><p>Annual savings by category</p></div></div><div class="chart-wrap"><canvas id="pieChart" height="280"></canvas></div></div>
+    <div class="card full-span"><div class="card-head"><div class="card-badge purple">&#128640;</div><div class="meta"><h3>3-Year Projection</h3><p>Return on investment timeline</p></div></div><div class="projection-grid" id="threeYearGrid"></div><div class="chart-wrap" style="margin-top:20px"><canvas id="barChart" height="200"></canvas></div></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn-primary" onclick="exportPPTX()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg> Export to Presentation</button>
+    <button class="btn-save" onclick="exportConfig()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Configuration</button>
+    <button class="btn-load" onclick="document.getElementById('importFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Import Configuration</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importConfig(event)">
+    <button class="btn-ghost" onclick="resetAll()">Reset All</button>
+  </div>
+</div>
+
+<div class="footer">Powered by <strong>Riverbed AppResponse</strong> &mdash; Network &amp; Application Performance Monitoring</div>
+
+<script>
+const fmt=n=>{if(n>=1e6)return '$'+(n/1e6).toFixed(1)+'M';if(n>=1000)return '$'+Math.round(n).toLocaleString('en-US');return '$'+Math.round(n)};
+const fmtFull=n=>'$'+Math.round(n).toLocaleString('en-US');
+
+let pieChart=null,barChart=null;
+Chart.defaults.color='#94A3B8';Chart.defaults.borderColor='rgba(0,0,0,0.06)';Chart.defaults.font.family='Inter';
+document.getElementById('reportDate').value=new Date().toISOString().split('T')[0];
+
+/* SECTION TOGGLES */
+const sectionState={'sec-it':true,'sec-incident':true,'sec-downtime':true,'sec-productivity':true,'sec-tools':true,'sec-security':true};
+function toggleSection(id,on){sectionState[id]=on;const el=document.getElementById(id);if(on)el.classList.remove('disabled');else el.classList.add('disabled');update()}
+
+/* PER-METRIC PRESET */
+function setMetric(id,val,btn){
+  document.getElementById(id).value=val;
+  if(btn){
+    const grp=btn.parentElement;
+    grp.querySelectorAll('.mp-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  update();
+}
+
+/* INPUTS */
+function getInputs(){
+  return{itStaff:+document.getElementById('itStaff').value,itHourly:+document.getElementById('itHourly').value,critApps:+document.getElementById('critApps').value,endUsers:+document.getElementById('endUsers').value,incidents:+document.getElementById('incidents').value,mttr:+document.getElementById('mttr').value,mttrReduction:+document.getElementById('mttrReduction').value/100,staffPerIncident:+document.getElementById('staffPerIncident').value,downtimeCost:+document.getElementById('downtimeCost').value,monthlyDowntime:+document.getElementById('monthlyDowntime').value,downtimeReduction:+document.getElementById('downtimeReduction').value/100,prodLoss:+document.getElementById('prodLoss').value,affectedPct:+document.getElementById('affectedPct').value/100,empHourly:+document.getElementById('empHourly').value,prodImprovement:+document.getElementById('prodImprovement').value/100,existingTools:+document.getElementById('existingTools').value,toolCost:+document.getElementById('toolCost').value,consolidateTools:+document.getElementById('consolidateTools').value,infraBudget:+document.getElementById('infraBudget').value,infraSaving:+document.getElementById('infraSaving').value/100,secIncidents:+document.getElementById('secIncidents').value,secTime:+document.getElementById('secTime').value,secReduction:+document.getElementById('secReduction').value/100,secHourly:+document.getElementById('secHourly').value,licenseCost:+document.getElementById('licenseCost').value,implCost:+document.getElementById('implCost').value,supportCost:+document.getElementById('supportCost').value,trainingCost:+document.getElementById('trainingCost').value};
+}
+
+/* CALCULATE */
+function calculate(i){
+  const itOn=sectionState['sec-it']&&sectionState['sec-incident'];
+  const itSavings=itOn?i.incidents*i.mttr*i.mttrReduction*i.staffPerIncident*i.itHourly*12:0;
+  const dtOn=sectionState['sec-downtime'];
+  const downtimeSavings=dtOn?i.monthlyDowntime*i.downtimeReduction*i.downtimeCost*12:0;
+  const prodOn=sectionState['sec-productivity']&&sectionState['sec-it'];
+  const affectedUsers=i.endUsers*i.affectedPct;
+  const prodLossHours=i.prodLoss/60;
+  const productivitySavings=prodOn?affectedUsers*prodLossHours*i.empHourly*i.incidents*i.prodImprovement*12:0;
+  const toolOn=sectionState['sec-tools'];
+  const toolSavings=toolOn?i.consolidateTools*i.toolCost:0;
+  const infraSavings=toolOn?i.infraBudget*i.infraSaving:0;
+  const secOn=sectionState['sec-security'];
+  const securitySavings=secOn?i.secIncidents*i.secTime*i.secReduction*i.secHourly*12:0;
+  const totalSavings=itSavings+downtimeSavings+productivitySavings+toolSavings+infraSavings+securitySavings;
+  const firstYearInvestment=i.licenseCost+i.implCost+i.supportCost+i.trainingCost;
+  const annualOngoing=i.licenseCost+i.supportCost;
+  const netBenefit=totalSavings-firstYearInvestment;
+  const roi=firstYearInvestment>0?(netBenefit/firstYearInvestment)*100:0;
+  const paybackMonths=totalSavings>0?(firstYearInvestment/(totalSavings/12)):Infinity;
+  const year1Net=totalSavings-firstYearInvestment;
+  const year2Net=totalSavings-annualOngoing;
+  const year3Net=totalSavings-annualOngoing;
+  const threeYearInvestment=firstYearInvestment+annualOngoing*2;
+  const threeYearROI=threeYearInvestment>0?((totalSavings*3-threeYearInvestment)/threeYearInvestment)*100:0;
+  return{itSavings,downtimeSavings,productivitySavings,toolSavings,infraSavings,securitySavings,totalSavings,firstYearInvestment,annualOngoing,netBenefit,roi,paybackMonths,year1Net,year2Net,year3Net,threeYearROI,threeYearInvestment};
+}
+
+/* UPDATE */
+function update(){
+  const i=getInputs();
+  document.getElementById('val-itStaff').textContent=i.itStaff;
+  document.getElementById('val-itHourly').textContent='$'+i.itHourly;
+  document.getElementById('val-critApps').textContent=i.critApps;
+  document.getElementById('val-endUsers').textContent=i.endUsers.toLocaleString();
+  document.getElementById('val-incidents').textContent=i.incidents;
+  document.getElementById('val-mttr').textContent=i.mttr+' hrs';
+  document.getElementById('val-mttrReduction').textContent=(i.mttrReduction*100)+'%';
+  document.getElementById('val-staffPerIncident').textContent=i.staffPerIncident;
+  document.getElementById('val-downtimeCost').textContent=fmt(i.downtimeCost);
+  document.getElementById('val-monthlyDowntime').textContent=i.monthlyDowntime+' hrs';
+  document.getElementById('val-downtimeReduction').textContent=(i.downtimeReduction*100)+'%';
+  document.getElementById('val-prodLoss').textContent=i.prodLoss+' min';
+  document.getElementById('val-affectedPct').textContent=(i.affectedPct*100)+'%';
+  document.getElementById('val-empHourly').textContent='$'+i.empHourly;
+  document.getElementById('val-prodImprovement').textContent=(i.prodImprovement*100)+'%';
+  document.getElementById('val-existingTools').textContent=i.existingTools;
+  document.getElementById('val-toolCost').textContent=fmt(i.toolCost);
+  document.getElementById('val-consolidateTools').textContent=i.consolidateTools;
+  document.getElementById('val-infraBudget').textContent=fmt(i.infraBudget);
+  document.getElementById('val-infraSaving').textContent=(i.infraSaving*100)+'%';
+  document.getElementById('val-secIncidents').textContent=i.secIncidents;
+  document.getElementById('val-secTime').textContent=i.secTime+' hrs';
+  document.getElementById('val-secReduction').textContent=(i.secReduction*100)+'%';
+  document.getElementById('val-secHourly').textContent='$'+i.secHourly;
+
+  const r=calculate(i);
+  document.getElementById('sum-roi').textContent=Math.round(r.roi)+'%';
+  document.getElementById('sum-savings').textContent=fmt(r.totalSavings);
+  document.getElementById('sum-payback').textContent=r.paybackMonths===Infinity?'N/A':(r.paybackMonths<1?'< 1 mo':Math.round(r.paybackMonths)+' mo');
+  document.getElementById('sum-investment').textContent=fmt(r.firstYearInvestment);
+
+  const cats=[{name:'IT Staff Time Savings (MTTR)',value:r.itSavings},{name:'Downtime Cost Reduction',value:r.downtimeSavings},{name:'User Productivity Gains',value:r.productivitySavings},{name:'Tool Consolidation',value:r.toolSavings},{name:'Infrastructure Optimization',value:r.infraSavings},{name:'Security Investigation Savings',value:r.securitySavings}];
+  let tbody='';
+  cats.forEach(c=>{tbody+=`<tr class="savings-row"><td>${c.name}</td><td>${fmtFull(c.value)}</td></tr>`;});
+  tbody+=`<tr class="total"><td>Total Annual Savings</td><td>${fmtFull(r.totalSavings)}</td></tr>`;
+  tbody+=`<tr><td>First Year Investment</td><td style="color:var(--warning)">-${fmtFull(r.firstYearInvestment)}</td></tr>`;
+  tbody+=`<tr class="total"><td>Net Benefit (Year 1)</td><td style="color:${r.netBenefit>=0?'var(--success)':'var(--danger)'}">${fmtFull(r.netBenefit)}</td></tr>`;
+  document.getElementById('savingsTableBody').innerHTML=tbody;
+
+  const pieCtx=document.getElementById('pieChart').getContext('2d');
+  if(pieChart)pieChart.destroy();
+  pieChart=new Chart(pieCtx,{type:'doughnut',data:{labels:cats.map(c=>c.name),datasets:[{data:cats.map(c=>c.value),backgroundColor:['#2563EB','#0891B2','#059669','#7C3AED','#D97706','#EA580C'],borderWidth:0,hoverOffset:8}]},options:{responsive:true,cutout:'68%',plugins:{legend:{display:true,position:'bottom',labels:{padding:14,usePointStyle:true,pointStyle:'circle',font:{size:11,weight:500},color:'#64748B'}},tooltip:{backgroundColor:'#0F172A',titleColor:'#F1F5F9',bodyColor:'#94A3B8',padding:12,cornerRadius:10,callbacks:{label:ctx=>ctx.label+': '+fmtFull(ctx.raw)+' ('+Math.round(ctx.raw/r.totalSavings*100)+'%)'}}}}});
+
+  const c1=r.year1Net,c2=c1+r.year2Net,c3=c2+r.year3Net;
+  document.getElementById('threeYearGrid').innerHTML=[{label:'Year 1',net:r.year1Net,cumul:c1},{label:'Year 2',net:r.year2Net,cumul:c2},{label:'Year 3',net:r.year3Net,cumul:c3}].map(y=>`<div class="year-card"><h4>${y.label}</h4><div class="amount">${fmt(y.net)}</div><div class="cumul">Cumulative: ${fmt(y.cumul)}</div></div>`).join('');
+
+  const barCtx=document.getElementById('barChart').getContext('2d');
+  if(barChart)barChart.destroy();
+  barChart=new Chart(barCtx,{type:'bar',data:{labels:['Year 1','Year 2','Year 3'],datasets:[{label:'Savings',data:[r.totalSavings,r.totalSavings,r.totalSavings],backgroundColor:'rgba(8,145,178,0.18)',borderColor:'rgba(8,145,178,0.6)',borderWidth:1,borderRadius:6,barPercentage:.5},{label:'Investment',data:[r.firstYearInvestment,r.annualOngoing,r.annualOngoing],backgroundColor:'rgba(217,119,6,0.12)',borderColor:'rgba(217,119,6,0.5)',borderWidth:1,borderRadius:6,barPercentage:.5},{label:'Net Benefit',data:[r.year1Net,r.year2Net,r.year3Net],backgroundColor:'rgba(5,150,105,0.15)',borderColor:'rgba(5,150,105,0.6)',borderWidth:1,borderRadius:6,barPercentage:.5}]},options:{responsive:true,scales:{y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{callback:v=>fmt(v),font:{size:11}}},x:{grid:{display:false},ticks:{font:{size:12,weight:600}}}},plugins:{legend:{labels:{padding:16,usePointStyle:true,pointStyle:'rectRounded',font:{size:11,weight:500},color:'#64748B'}},tooltip:{backgroundColor:'#0F172A',titleColor:'#F1F5F9',bodyColor:'#94A3B8',padding:12,cornerRadius:10,callbacks:{label:ctx=>ctx.dataset.label+': '+fmtFull(ctx.raw)}}}}});
+}
+
+/* RESET */
+function resetAll(){
+  const d={itStaff:10,itHourly:75,critApps:25,endUsers:500,incidents:30,mttr:4,mttrReduction:50,staffPerIncident:2,downtimeCost:10000,monthlyDowntime:8,downtimeReduction:40,prodLoss:30,affectedPct:20,empHourly:45,prodImprovement:45,existingTools:4,toolCost:25000,consolidateTools:2,infraBudget:500000,infraSaving:5,secIncidents:5,secTime:8,secReduction:40,secHourly:95,licenseCost:85000,implCost:25000,supportCost:15000,trainingCost:8000};
+  Object.entries(d).forEach(([k,v])=>{document.getElementById(k).value=v;});
+  document.getElementById('companyName').value='';document.getElementById('contactName').value='';
+  Object.keys(sectionState).forEach(id=>{sectionState[id]=true;document.getElementById(id).classList.remove('disabled');document.getElementById(id).querySelector('.sec-toggle input').checked=true;});
+  document.querySelectorAll('.mp-btn').forEach(b=>b.classList.remove('active'));
+  update();
+}
+
+/* PPTX EXPORT */
+function exportPPTX(){
+  if(typeof PptxGenJS==='undefined'){alert('Presentation library is still loading. Please wait a moment and try again.');return;}
+  try{
+  const i=getInputs(),r=calculate(i);
+  const company=document.getElementById('companyName').value||'Customer';
+  const industry=document.getElementById('industry').value;
+  const contact=document.getElementById('contactName').value||'';
+  const date=document.getElementById('reportDate').value||new Date().toISOString().split('T')[0];
+  const pres=new PptxGenJS();
+  pres.layout='LAYOUT_16x9';pres.author='Riverbed ROI Calculator';pres.title=`Riverbed AppResponse ROI - ${company}`;
+  const C={primary:'0C4A6E',primaryLight:'0369A1',accent:'06B6D4',success:'059669',warning:'D97706',danger:'DC2626',dark:'0F172A',muted:'64748B',light:'F0F9FF',white:'FFFFFF',bg:'F8FAFC'};
+
+  let s1=pres.addSlide();s1.background={color:C.primary};
+  s1.addShape(pres.shapes.OVAL,{x:6.5,y:-1.5,w:5,h:5,fill:{color:C.primaryLight,transparency:70}});
+  s1.addShape(pres.shapes.OVAL,{x:7.5,y:2.5,w:4,h:4,fill:{color:C.accent,transparency:80}});
+  s1.addText('ROI ANALYSIS',{x:.8,y:1.2,w:8,h:.4,fontSize:12,fontFace:'Arial',color:C.accent,bold:true,charSpacing:4,margin:0});
+  s1.addText('Riverbed AppResponse',{x:.8,y:1.7,w:8,h:.8,fontSize:36,fontFace:'Arial',color:C.white,bold:true,margin:0});
+  s1.addText(`${company} | ${industry}`,{x:.8,y:2.7,w:8,h:.5,fontSize:18,fontFace:'Arial',color:C.accent,margin:0});
+  s1.addText(`${contact?contact+' | ':''}${date}`,{x:.8,y:3.4,w:8,h:.4,fontSize:13,fontFace:'Arial',color:C.white,transparency:40,margin:0});
+
+  let s2=pres.addSlide();s2.background={color:C.bg};
+  s2.addText('Executive Summary',{x:.6,y:.3,w:9,h:.6,fontSize:28,fontFace:'Arial',color:C.primary,bold:true,margin:0});
+  [{label:'ROI',value:Math.round(r.roi)+'%',color:C.success},{label:'Annual Savings',value:fmt(r.totalSavings),color:C.primaryLight},{label:'Payback',value:r.paybackMonths<1?'< 1 mo':Math.round(r.paybackMonths)+' mo',color:C.accent},{label:'Net Benefit',value:fmt(r.netBenefit),color:r.netBenefit>=0?C.success:C.danger}].forEach((card,idx)=>{const x=.6+idx*2.3;s2.addShape(pres.shapes.RECTANGLE,{x,y:1.2,w:2,h:1.6,fill:{color:C.white},shadow:{type:'outer',blur:8,offset:2,angle:135,color:'000000',opacity:.08}});s2.addText(card.label,{x,y:1.35,w:2,h:.35,fontSize:10,fontFace:'Arial',color:C.muted,align:'center',bold:true,margin:0});s2.addText(card.value,{x,y:1.7,w:2,h:.7,fontSize:28,fontFace:'Arial',color:card.color,align:'center',bold:true,margin:0});});
+  s2.addText('Key Parameters',{x:.6,y:3.2,w:9,h:.4,fontSize:14,fontFace:'Arial',color:C.primary,bold:true,margin:0});
+  const pt2=[[{text:'Parameter',options:{fill:{color:C.primary},color:C.white,bold:true,fontSize:10,fontFace:'Arial'}},{text:'Value',options:{fill:{color:C.primary},color:C.white,bold:true,fontSize:10,fontFace:'Arial'}},{text:'Parameter',options:{fill:{color:C.primary},color:C.white,bold:true,fontSize:10,fontFace:'Arial'}},{text:'Value',options:{fill:{color:C.primary},color:C.white,bold:true,fontSize:10,fontFace:'Arial'}}],...[['IT Staff',i.itStaff+' people','Monthly Incidents',i.incidents+'/mo'],['Current MTTR',i.mttr+' hrs','MTTR Reduction',(i.mttrReduction*100)+'%'],['Downtime Cost',fmt(i.downtimeCost)+'/hr','End Users',i.endUsers.toLocaleString()],['Monitoring Tools',i.existingTools+' tools','Consolidate',i.consolidateTools+' tools']].map(row=>row.map((cell,ci)=>({text:cell,options:{fontSize:10,fontFace:'Arial',color:ci%2===0?C.dark:C.primaryLight,bold:ci%2===1,fill:{color:C.white}}})))];
+  s2.addTable(pt2,{x:.6,y:3.65,w:8.8,colW:[2.2,2.2,2.2,2.2],border:{pt:.5,color:'E2E8F0'}});
+
+  let s3=pres.addSlide();s3.background={color:C.bg};
+  s3.addText('Annual Savings Breakdown',{x:.6,y:.3,w:9,h:.6,fontSize:28,fontFace:'Arial',color:C.primary,bold:true,margin:0});
+  const sd=[{name:'IT Staff Time Savings (MTTR)',value:r.itSavings,color:C.primaryLight},{name:'Downtime Cost Reduction',value:r.downtimeSavings,color:C.accent},{name:'User Productivity Gains',value:r.productivitySavings,color:C.success},{name:'Tool Consolidation',value:r.toolSavings,color:'7C3AED'},{name:'Infrastructure Optimization',value:r.infraSavings,color:C.warning},{name:'Security Investigation Savings',value:r.securitySavings,color:'EA580C'}];
+  const st=[[{text:'Savings Category',options:{fill:{color:C.primary},color:C.white,bold:true,fontSize:11,fontFace:'Arial'}},{text:'Annual Amount',options:{fill:{color:C.primary},color:C.white,bold:true,fontSize:11,fontFace:'Arial',align:'right'}},{text:'Share',options:{fill:{color:C.primary},color:C.white,bold:true,fontSize:11,fontFace:'Arial',align:'right'}}],...sd.map(s=>[{text:s.name,options:{fontSize:11,fontFace:'Arial',color:C.dark,fill:{color:C.white}}},{text:fmtFull(s.value),options:{fontSize:11,fontFace:'Arial',color:C.success,bold:true,align:'right',fill:{color:C.white}}},{text:r.totalSavings>0?Math.round(s.value/r.totalSavings*100)+'%':'0%',options:{fontSize:11,fontFace:'Arial',color:C.muted,align:'right',fill:{color:C.white}}}]),[{text:'TOTAL ANNUAL SAVINGS',options:{fontSize:12,fontFace:'Arial',color:C.primary,bold:true,fill:{color:C.light}}},{text:fmtFull(r.totalSavings),options:{fontSize:12,fontFace:'Arial',color:C.primary,bold:true,align:'right',fill:{color:C.light}}},{text:'100%',options:{fontSize:12,fontFace:'Arial',color:C.primary,bold:true,align:'right',fill:{color:C.light}}}]];
+  s3.addTable(st,{x:.6,y:1.1,w:8.8,colW:[5.3,2,1.5],border:{pt:.5,color:'E2E8F0'}});
+  const maxVal=Math.max(...sd.map(s=>s.value));
+  sd.forEach((s,idx)=>{const y=3.8+idx*.28;const bW=maxVal>0?(s.value/maxVal)*5.5:0;s3.addShape(pres.shapes.RECTANGLE,{x:3.5,y,w:5.5,h:.18,fill:{color:'E2E8F0'}});if(bW>0)s3.addShape(pres.shapes.RECTANGLE,{x:3.5,y,w:bW,h:.18,fill:{color:s.color}});});
+
+  let s4=pres.addSlide();s4.background={color:C.bg};
+  s4.addText('3-Year Projection',{x:.6,y:.3,w:9,h:.6,fontSize:28,fontFace:'Arial',color:C.primary,bold:true,margin:0});
+  const cc1=r.year1Net,cc2=cc1+r.year2Net,cc3=cc2+r.year3Net;
+  const pt4=[[{text:'',options:{fill:{color:C.primary},color:C.white,bold:true,fontSize:11,fontFace:'Arial'}},{text:'Year 1',options:{fill:{color:C.primary},color:C.white,bold:true,fontSize:11,fontFace:'Arial',align:'center'}},{text:'Year 2',options:{fill:{color:C.primary},color:C.white,bold:true,fontSize:11,fontFace:'Arial',align:'center'}},{text:'Year 3',options:{fill:{color:C.primary},color:C.white,bold:true,fontSize:11,fontFace:'Arial',align:'center'}}],[{text:'Annual Savings',options:{fontSize:11,fontFace:'Arial',fill:{color:C.white}}},{text:fmtFull(r.totalSavings),options:{fontSize:11,fontFace:'Arial',color:C.success,bold:true,align:'center',fill:{color:C.white}}},{text:fmtFull(r.totalSavings),options:{fontSize:11,fontFace:'Arial',color:C.success,bold:true,align:'center',fill:{color:C.white}}},{text:fmtFull(r.totalSavings),options:{fontSize:11,fontFace:'Arial',color:C.success,bold:true,align:'center',fill:{color:C.white}}}],[{text:'Investment Cost',options:{fontSize:11,fontFace:'Arial',fill:{color:C.white}}},{text:fmtFull(r.firstYearInvestment),options:{fontSize:11,fontFace:'Arial',color:C.warning,bold:true,align:'center',fill:{color:C.white}}},{text:fmtFull(r.annualOngoing),options:{fontSize:11,fontFace:'Arial',color:C.warning,bold:true,align:'center',fill:{color:C.white}}},{text:fmtFull(r.annualOngoing),options:{fontSize:11,fontFace:'Arial',color:C.warning,bold:true,align:'center',fill:{color:C.white}}}],[{text:'Net Benefit',options:{fontSize:11,fontFace:'Arial',bold:true,fill:{color:C.white}}},{text:fmtFull(r.year1Net),options:{fontSize:11,fontFace:'Arial',color:r.year1Net>=0?C.success:C.danger,bold:true,align:'center',fill:{color:C.white}}},{text:fmtFull(r.year2Net),options:{fontSize:11,fontFace:'Arial',color:C.success,bold:true,align:'center',fill:{color:C.white}}},{text:fmtFull(r.year3Net),options:{fontSize:11,fontFace:'Arial',color:C.success,bold:true,align:'center',fill:{color:C.white}}}],[{text:'Cumulative Net Benefit',options:{fontSize:12,fontFace:'Arial',bold:true,color:C.primary,fill:{color:C.light}}},{text:fmtFull(cc1),options:{fontSize:12,fontFace:'Arial',bold:true,color:C.primary,align:'center',fill:{color:C.light}}},{text:fmtFull(cc2),options:{fontSize:12,fontFace:'Arial',bold:true,color:C.primary,align:'center',fill:{color:C.light}}},{text:fmtFull(cc3),options:{fontSize:12,fontFace:'Arial',bold:true,color:C.primary,align:'center',fill:{color:C.light}}}]];
+  s4.addTable(pt4,{x:.6,y:1.1,w:8.8,colW:[3,1.93,1.93,1.93],border:{pt:.5,color:'E2E8F0'}});
+  s4.addShape(pres.shapes.RECTANGLE,{x:.6,y:3.6,w:8.8,h:1.5,fill:{color:C.primary},shadow:{type:'outer',blur:10,offset:3,angle:135,color:'000000',opacity:.12}});
+  s4.addText('3-YEAR TOTAL',{x:.6,y:3.7,w:8.8,h:.35,fontSize:11,fontFace:'Arial',color:C.accent,bold:true,align:'center',margin:0});
+  s4.addText([{text:'Total Savings: ',options:{fontSize:14,color:'CADCFC'}},{text:fmtFull(r.totalSavings*3),options:{fontSize:22,bold:true,color:C.white}},{text:'   |   Total Investment: ',options:{fontSize:14,color:'CADCFC'}},{text:fmtFull(r.threeYearInvestment),options:{fontSize:22,bold:true,color:C.warning}},{text:'   |   3-Year ROI: ',options:{fontSize:14,color:'CADCFC'}},{text:Math.round(r.threeYearROI)+'%',options:{fontSize:22,bold:true,color:C.success}}],{x:.6,y:4.1,w:8.8,h:.8,fontFace:'Arial',align:'center',valign:'middle'});
+
+  let s5=pres.addSlide();s5.background={color:C.white};
+  s5.addText('Why Riverbed AppResponse?',{x:.6,y:.3,w:9,h:.6,fontSize:28,fontFace:'Arial',color:C.primary,bold:true,margin:0});
+  [{title:'Full Packet Capture',desc:'Real-time capture and analysis of every packet — zero sampling, zero blind spots',icon:'1'},{title:'Fast Root Cause',desc:'Root cause identification in seconds with advanced TCP metrics and MTTR reduction',icon:'2'},{title:'Proactive Monitoring',desc:'Detect issues before users notice with adaptive thresholds and AIOps',icon:'3'},{title:'Security Forensics',desc:'Detect security threats, anomalies, and unauthorized access with DPI',icon:'4'},{title:'Hybrid & Cloud',desc:'Full visibility across on-prem, virtual, and cloud (AWS, Azure, GCP)',icon:'5'},{title:'Integration',desc:'Seamless integration with NetProfiler, NPM+, NetIM — single platform',icon:'6'}].forEach((b,idx)=>{const col=idx%2,row=Math.floor(idx/2),x=.6+col*4.6,y=1.2+row*1.35;s5.addShape(pres.shapes.RECTANGLE,{x,y,w:4.2,h:1.15,fill:{color:C.bg},shadow:{type:'outer',blur:4,offset:1,angle:135,color:'000000',opacity:.06}});s5.addShape(pres.shapes.OVAL,{x:x+.2,y:y+.25,w:.55,h:.55,fill:{color:C.primary}});s5.addText(b.icon,{x:x+.2,y:y+.25,w:.55,h:.55,fontSize:14,fontFace:'Arial',color:C.white,bold:true,align:'center',valign:'middle',margin:0});s5.addText(b.title,{x:x+.95,y:y+.15,w:3,h:.35,fontSize:13,fontFace:'Arial',color:C.primary,bold:true,margin:0});s5.addText(b.desc,{x:x+.95,y:y+.5,w:3,h:.55,fontSize:10,fontFace:'Arial',color:C.muted,margin:0});});
+
+  let s6=pres.addSlide();s6.background={color:C.primary};
+  s6.addShape(pres.shapes.OVAL,{x:7,y:-1,w:4.5,h:4.5,fill:{color:C.primaryLight,transparency:70}});
+  s6.addShape(pres.shapes.OVAL,{x:-1,y:3,w:4,h:4,fill:{color:C.accent,transparency:80}});
+  s6.addText('Next Steps',{x:.8,y:.8,w:8,h:.6,fontSize:32,fontFace:'Arial',color:C.white,bold:true,margin:0});
+  ['Detailed technical assessment and architecture planning','Proof of Concept (PoC) setup and testing process','Pilot deployment and results reporting','Full-scale deployment and training plan'].forEach((step,idx)=>{s6.addShape(pres.shapes.OVAL,{x:1,y:1.8+idx*.75,w:.4,h:.4,fill:{color:C.accent}});s6.addText(String(idx+1),{x:1,y:1.8+idx*.75,w:.4,h:.4,fontSize:13,fontFace:'Arial',color:C.white,bold:true,align:'center',valign:'middle',margin:0});s6.addText(step,{x:1.6,y:1.8+idx*.75,w:7,h:.4,fontSize:16,fontFace:'Arial',color:C.white,valign:'middle',margin:0});});
+  s6.addText(`Estimated ROI for ${company}: ${Math.round(r.roi)}% | Payback: ${r.paybackMonths<1?'< 1':Math.round(r.paybackMonths)} months`,{x:.8,y:4.5,w:8.4,h:.5,fontSize:14,fontFace:'Arial',color:C.accent,bold:true,margin:0});
+
+  pres.writeFile({fileName:`Riverbed_AppResponse_ROI_${company.replace(/\s+/g,'_')}.pptx`})
+    .then(()=>console.log('PPTX exported'))
+    .catch(err=>{alert('Error exporting: '+err.message);console.error(err);});
+  }catch(err){alert('Error generating: '+err.message);console.error(err);}
+}
+
+/* SAVE / IMPORT CONFIG */
+function exportConfig(){
+  const config={version:1,timestamp:new Date().toISOString(),companyName:document.getElementById('companyName').value,contactName:document.getElementById('contactName').value,industry:document.getElementById('industry').value,reportDate:document.getElementById('reportDate').value,sectionState:{...sectionState},inputs:{}};
+  const inputIds=['itStaff','itHourly','critApps','endUsers','incidents','mttr','mttrReduction','staffPerIncident','downtimeCost','monthlyDowntime','downtimeReduction','prodLoss','affectedPct','empHourly','prodImprovement','existingTools','toolCost','consolidateTools','infraBudget','infraSaving','secIncidents','secTime','secReduction','secHourly','licenseCost','implCost','supportCost','trainingCost'];
+  inputIds.forEach(id=>{config.inputs[id]=document.getElementById(id).value;});
+  const activePresets=[];
+  document.querySelectorAll('.mp-btn.active').forEach(btn=>{
+    const field=btn.closest('.field');
+    if(field){const input=field.querySelector('input[type="range"],input[type="number"]');if(input)activePresets.push({inputId:input.id,btnText:btn.textContent.trim()});}
+  });
+  config.activePresets=activePresets;
+  const name=prompt('Enter a name for this configuration:','ROI-Config-'+new Date().toISOString().slice(0,10));
+  if(!name)return;
+  const blob=new Blob([JSON.stringify(config,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=name.replace(/[^a-zA-Z0-9_\-\.]/g,'_')+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importConfig(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const config=JSON.parse(e.target.result);
+      if(!config.inputs){alert('Invalid configuration file.');return;}
+      if(config.companyName!==undefined)document.getElementById('companyName').value=config.companyName;
+      if(config.contactName!==undefined)document.getElementById('contactName').value=config.contactName;
+      if(config.industry)document.getElementById('industry').value=config.industry;
+      if(config.reportDate)document.getElementById('reportDate').value=config.reportDate;
+      Object.entries(config.inputs).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
+      if(config.sectionState){Object.entries(config.sectionState).forEach(([id,on])=>{sectionState[id]=on;const el=document.getElementById(id);if(el){if(on){el.classList.remove('disabled');}else{el.classList.add('disabled');}const toggle=el.querySelector('.sec-toggle input');if(toggle)toggle.checked=on;}});}
+      document.querySelectorAll('.mp-btn').forEach(b=>b.classList.remove('active'));
+      if(config.activePresets){config.activePresets.forEach(p=>{document.querySelectorAll('.mp-btn').forEach(btn=>{const field=btn.closest('.field');if(field){const input=field.querySelector('input[type="range"],input[type="number"]');if(input&&input.id===p.inputId&&btn.textContent.trim()===p.btnText)btn.classList.add('active');}});});}
+      update();
+      alert('Configuration imported successfully!');
+    }catch(err){alert('Error reading configuration: '+err.message);}
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+update();
+</script>
+</body>
+</html>
